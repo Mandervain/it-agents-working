@@ -8,5 +8,25 @@
     "status": "open",
     "message": "The HP LaserJet on Floor 3 is not printing. Jobs are queued but nothing comes out. The printer shows a green light and appears online. Other people on the floor have the same issue.",
     "created_at": "2026-04-24T09:00:00Z"
+  },
+  {
+    "id": "INC-1007",
+    "source": "email",
+    "user": "jan.wisniewski",
+    "priority": "medium",
+    "category": "outlook",
+    "status": "open",
+    "message": "Outlook crashes every time I try to open an attachment.",
+    "created_at": "2026-04-24T13:34:23Z"
+  },
+  {
+    "id": "INC-1008",
+    "source": "email",
+    "user": "katarzyna.kowalczyk",
+    "priority": "low",
+    "category": "laptop_slow",
+    "status": "open",
+    "message": "Laptop fan running at full speed constantly. Very hot and slow.",
+    "created_at": "2026-04-24T13:34:23Z"
   }
 ]

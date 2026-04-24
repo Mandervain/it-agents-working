@@ -8,5 +8,25 @@
     "status": "open",
     "message": "Outlook stopped receiving new emails since this morning. I can send emails fine but nothing is coming in. My colleagues say they can see my emails bouncing back.",
     "created_at": "2026-04-24T08:30:00Z"
+  },
+  {
+    "id": "INC-1009",
+    "source": "teams",
+    "user": "marek.jankowski",
+    "priority": "low",
+    "category": "password_reset",
+    "status": "open",
+    "message": "Locked out of account after too many wrong password attempts.",
+    "created_at": "2026-04-24T13:34:23Z"
+  },
+  {
+    "id": "INC-1011",
+    "source": "teams",
+    "user": "barbara.szymanska",
+    "priority": "high",
+    "category": "printer",
+    "status": "open",
+    "message": "Printer prints but cuts off the right side of every document.",
+    "created_at": "2026-04-24T13:34:23Z"
   }
 ]
