@@ -1,6 +1,6 @@
 # IT Helpdesk Agent Simulator
 
-An AI-powered IT Helpdesk agent that reads unresolved tickets from simulated enterprise sources (Slack, Teams, Email, Service Desk), searches a local knowledge base, proposes solutions, updates ticket state, and generates a report. Built as a hackathon MVP — local file-based, no external database.
+An AI-powered IT Helpdesk agent that reads unresolved tickets from simulated enterprise sources (Slack, Teams, Email, Service Desk), searches a local knowledge base, proposes solutions, updates ticket state, and generates a report.
 
 ---
 
@@ -8,61 +8,73 @@ An AI-powered IT Helpdesk agent that reads unresolved tickets from simulated ent
 
 | Layer | Technology |
 |-------|-----------|
-| Language | Python 3.12 |
-| AI / LLM | Anthropic Claude API (stretch: Ollama) |
+| Language | Python 3.13 |
+| AI / LLM | Anthropic Claude Sonnet 4.6 via AWS Bedrock |
 | Storage | Local JSON files + Markdown |
-| Package manager | pip / requirements.txt |
-| UI (stretch) | Streamlit |
-| Search (stretch) | Vector search / RAG |
+| Package manager | uv + requirements.txt |
+| Frontend | Streamlit |
+| Search | TF-IDF vector search (scikit-learn) |
 
 ---
 
-## Running Locally
+## Running
 
 ```bash
-# Create virtual environment (first time — system Python is PEP 668 restricted)
+# First time — create venv
 uv venv .venv
-uv pip install anthropic --python .venv/bin/python
+uv pip install -r requirements.txt --python .venv/bin/python
 
-# Set API key and run
-export ANTHROPIC_API_KEY=sk-ant-...
+# Authenticate (corporate SSO)
+aws login --profile bootcamp
+
+# Set env vars
+export CLAUDE_CODE_USE_BEDROCK=1
+export AWS_PROFILE=bootcamp
+export AWS_REGION=us-west-2
+
+# CLI agent run
 .venv/bin/python src/main.py
-```
 
-Required env var: `ANTHROPIC_API_KEY` — the agent prints a clear error and exits if missing.
-No database, no external services required for the MVP. All data lives under `data/`, `knowledge_base/`, `state/`, and `output/`.
+# Streamlit dashboard
+.venv/bin/streamlit run src/dashboard.py --server.address 0.0.0.0 --server.port 8501 --server.headless true
+
+# Interactive chat
+.venv/bin/python src/chat.py
+
+# CLI with vector search (RAG)
+USE_RAG=1 .venv/bin/python src/main.py
+```
 
 ---
 
 ## Project Structure
 
 ```
-helpdesk-agent-demo/
-├── data/
+├── data/                    ← read-only ticket sources (Slack, Teams, Email, Service Desk)
 │   ├── slack/tickets.json
 │   ├── teams/tickets.json
 │   ├── email/tickets.json
 │   └── service_desk/tickets.json
-├── knowledge_base/
+├── knowledge_base/          ← markdown troubleshooting articles
 │   ├── vpn.md
-│   ├── password_reset.md
 │   ├── outlook.md
 │   ├── printer.md
-│   └── laptop_slow.md
-├── state/
-│   └── ticket_state.json
-├── output/
-│   ├── proposed_solutions.md
-│   └── resolved_tickets.json
-├── src/
-│   ├── main.py           ← entry point, orchestrates the agent loop
-│   ├── ticket_loader.py  ← reads tickets from all data/ sources
-│   ├── state_manager.py  ← reads/writes state/ticket_state.json
-│   ├── kb_search.py      ← keyword search over knowledge_base/
-│   ├── agent.py          ← Claude API call, returns structured JSON
-│   └── report_writer.py  ← writes output/proposed_solutions.md
-├── requirements.txt
-└── README.md
+│   ├── laptop_slow.md
+│   └── password_reset.md
+├── state/                   ← runtime ticket state (gitignored)
+├── output/                  ← generated reports (gitignored)
+└── src/
+    ├── main.py              ← orchestrator
+    ├── ticket_loader.py     ← reads all data/ sources
+    ├── state_manager.py     ← atomic read/write of ticket_state.json
+    ├── kb_search.py         ← keyword search over knowledge_base/
+    ├── kb_search_rag.py     ← TF-IDF vector search (USE_RAG=1)
+    ├── agent.py             ← Bedrock / Anthropic API call, structured JSON output
+    ├── sla_tracker.py       ← SLA calculation per priority
+    ├── escalation_rules.py  ← auto-escalation rules (SLA breach, 24h stall)
+    ├── report_writer.py     ← writes output/proposed_solutions.md
+    ├── dashboard.py         ← Streamlit frontend
+    └── chat.py              ← interactive multi-turn CLI chat
 ```
 
 ---
@@ -74,56 +86,52 @@ open → triaged → solution_proposed → waiting_for_user → resolved
                                                        → escalated
 ```
 
-Never mark a ticket `resolved` without explicit user confirmation. When confidence is low, set status to `escalated`.
+---
+
+## SLA Rules
+
+| Priority | SLA Limit | Auto-escalation trigger |
+|----------|-----------|------------------------|
+| high | 1 hour | SLA breached |
+| medium | 4 hours | SLA breached |
+| low | 8 hours | 24h stall |
 
 ---
 
 ## Key Conventions
 
-- Ticket IDs follow the pattern `INC-NNNN` (e.g. `INC-1001`).
+- Ticket IDs follow `INC-NNNN` format.
 - All ticket JSON must include: `id`, `source`, `user`, `priority`, `category`, `status`, `message`, `created_at`.
 - Agent output is always structured JSON — never freeform prose from `agent.py`.
-- `kb_search.py` is keyword-based for MVP. Do not add vector/embedding logic here until the stretch phase.
-- State is persisted to `state/ticket_state.json` after every ticket — do not batch-write at the end.
-- One source of truth per ticket: `state/ticket_state.json` owns current status; raw `data/` files are read-only inputs.
+- State is persisted after every ticket (atomic write) — never batch at the end.
+- `data/` is read-only — the guard hook blocks writes at the Claude Code level.
+- One source of truth per ticket: `state/ticket_state.json` owns current status.
 
 ---
 
-## Agent Rules (enforce these in prompts and code)
+## Agent Rules
 
 1. Use ticket data + knowledge base only — do not invent infrastructure details.
 2. If confidence is low or no KB article matches → escalate, never guess.
-3. Return structured JSON only from the agent — no markdown prose in agent output.
-4. Do not mark resolved without user confirmation.
+3. Return structured JSON only — no prose, no markdown fences.
+4. Never mark resolved without user confirmation.
 5. Prefer the simplest troubleshooting steps first.
 
 ---
 
 ## What NOT to Do
 
-- Do not write to `data/` — those are read-only source inputs.
-- Do not add a database (SQLite, Postgres, etc.) in the MVP phase.
+- Do not write to `data/` — read-only source inputs.
+- Do not add a database in the MVP.
 - Do not inline the agent prompt in `main.py` — it lives in `agent.py`.
 - Do not swallow exceptions in `state_manager.py` — corrupt state is worse than a crash.
-- Do not add Streamlit or RAG until the core CLI loop works end-to-end.
-
----
-
-## Expected MVP Output
-
-```
-AI Helpdesk Agent processed 5 tickets
-4 solutions proposed
-1 ticket escalated
-Report saved to output/proposed_solutions.md
-```
+- Do not gold-plate beyond task scope without confirming first.
 
 ---
 
 ## Claude-Specific Guidance
 
 - Prefer editing existing files over creating new ones.
-- Default to no comments — function and variable names should be self-explanatory.
+- Default to no comments — self-explanatory names only.
 - Never skip hooks (`--no-verify`) or force-push without explicit instruction.
-- When adding a stretch goal feature, confirm scope before starting — do not gold-plate the MVP.
 - Match response length to task complexity.
