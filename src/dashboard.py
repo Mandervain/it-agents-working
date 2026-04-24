@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import sla_tracker
 import state_manager
+import ticket_generator
 import ticket_loader
 
 st.set_page_config(page_title="IT Helpdesk Agent", page_icon="🎫", layout="wide")
@@ -31,7 +32,7 @@ with st.sidebar:
     backend = st.radio("Provider", ["AWS Bedrock", "Anthropic API"])
 
     if backend == "AWS Bedrock":
-        aws_region = st.text_input("AWS Region", value=os.environ.get("AWS_DEFAULT_REGION", "us-east-1"))
+        aws_region = st.text_input("AWS Region", value=os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION", "us-east-1"))
         api_key_val = ""
     else:
         api_key_val = st.text_input(
@@ -79,6 +80,27 @@ with st.sidebar:
             st.error("Agent failed")
             st.code(proc.stderr)
 
+        st.rerun()
+
+    st.divider()
+    st.header("🎲 Generate Tickets")
+
+    n_tickets = st.slider("Number of tickets", min_value=1, max_value=10, value=2)
+    gen_category = st.selectbox("Category", ["Random"] + ticket_generator.CATEGORIES)
+    gen_priority = st.selectbox("Priority", ["Random", "high", "medium", "low"])
+    gen_source = st.selectbox("Source", ["Random"] + ticket_generator.SOURCES)
+
+    if st.button("🎲 Generate & Add", use_container_width=True):
+        new_tickets = ticket_generator.generate_tickets(
+            n=n_tickets,
+            category=None if gen_category == "Random" else gen_category,
+            priority=None if gen_priority == "Random" else gen_priority,
+            source=None if gen_source == "Random" else gen_source,
+        )
+        ticket_generator.save_tickets(new_tickets)
+        st.success(f"Added {len(new_tickets)} ticket(s)")
+        for t in new_tickets:
+            st.caption(f"**{t['id']}** [{t['category']}] {t['priority']} · {t['user']}")
         st.rerun()
 
     st.divider()
