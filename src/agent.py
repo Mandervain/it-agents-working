@@ -4,8 +4,10 @@ import re
 
 import anthropic
 
-# Bedrock model ID for claude-sonnet-4-6 (cross-region inference profile)
-MODEL_BEDROCK = "us.anthropic.claude-sonnet-4-6-20251001-v1:0"
+# Bedrock cross-region inference profile prefix per AWS region group
+_BEDROCK_REGION_PREFIX = {"us": "us", "eu": "eu", "ap": "ap"}
+_BEDROCK_MODEL_BASE = "anthropic.claude-sonnet-4-6-20251001-v1:0"
+
 # Direct Anthropic API model ID
 MODEL_DIRECT = "claude-sonnet-4-6"
 
@@ -35,10 +37,27 @@ def _use_bedrock() -> bool:
     return os.environ.get("CLAUDE_CODE_USE_BEDROCK", "").strip() == "1"
 
 
+def _bedrock_region() -> str:
+    # AWS_REGION takes priority (matches bootcamp pattern), then AWS_DEFAULT_REGION
+    return os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
+
+
+def _bedrock_model_id() -> str:
+    region = _bedrock_region()
+    # Derive cross-region inference prefix from the region name (us-*, eu-*, ap-*)
+    prefix = region.split("-")[0]
+    if prefix not in _BEDROCK_REGION_PREFIX:
+        prefix = "us"
+    return f"{prefix}.{_BEDROCK_MODEL_BASE}"
+
+
 def get_client() -> anthropic.Anthropic | anthropic.AnthropicBedrock:
     if _use_bedrock():
-        region = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
-        return anthropic.AnthropicBedrock(aws_region=region)
+        kwargs: dict = {"aws_region": _bedrock_region()}
+        profile = os.environ.get("AWS_PROFILE")
+        if profile:
+            kwargs["aws_profile"] = profile
+        return anthropic.AnthropicBedrock(**kwargs)
 
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
@@ -51,7 +70,7 @@ def get_client() -> anthropic.Anthropic | anthropic.AnthropicBedrock:
 
 
 def _model() -> str:
-    return MODEL_BEDROCK if _use_bedrock() else MODEL_DIRECT
+    return _bedrock_model_id() if _use_bedrock() else MODEL_DIRECT
 
 
 def build_user_message(ticket: dict, kb_article: str | None) -> str:
