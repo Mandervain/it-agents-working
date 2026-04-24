@@ -8,5 +8,15 @@
     "status": "open",
     "message": "Hi, I changed my corporate password yesterday and now I cannot connect to VPN. It keeps saying authentication failed. I need access urgently for a client call.",
     "created_at": "2026-04-24T07:15:00Z"
+  },
+  {
+    "id": "INC-1006",
+    "source": "slack",
+    "user": "frank.miller",
+    "priority": "high",
+    "category": "vpn",
+    "status": "open",
+    "message": "VPN still not working. This has been going on since yesterday morning. I have already tried restarting the client and clearing credentials. Nothing works.",
+    "created_at": "2026-04-23T08:00:00Z"
   }
 ]

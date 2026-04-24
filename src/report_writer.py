@@ -20,7 +20,9 @@ def format_table_row(ticket_id: str, entry: dict) -> str:
     confidence = entry.get("confidence", "")
     status = entry.get("status", "")
     next_action = entry.get("next_action", "")
-    return f"| {ticket_id} | {category} | {priority} | {user} | {confidence} | {status} | {next_action} |"
+    elapsed = entry.get("sla_elapsed_minutes", "?")
+    sla_status = "BREACHED" if entry.get("sla_breached") else "OK"
+    return f"| {ticket_id} | {category} | {priority} | {user} | {confidence} | {status} | {sla_status} ({elapsed}m) | {next_action} |"
 
 
 def write_report(state: dict) -> None:
@@ -37,8 +39,8 @@ def write_report(state: dict) -> None:
         "",
         f"Generated: {now}",
         "",
-        "| Ticket ID | Category | Priority | User | Confidence | Status | Next Action |",
-        "|-----------|----------|----------|------|------------|--------|-------------|",
+        "| Ticket ID | Category | Priority | User | Confidence | Status | SLA | Next Action |",
+        "|-----------|----------|----------|------|------------|--------|-----|-------------|",
     ]
 
     for ticket_id in sorted(state.keys()):

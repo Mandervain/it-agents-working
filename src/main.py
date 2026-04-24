@@ -1,11 +1,14 @@
+import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
 import agent
+import escalation_rules
 import kb_search
 import report_writer
+import sla_tracker
 import state_manager
 import ticket_loader
 
@@ -15,10 +18,27 @@ def process_ticket(ticket: dict) -> dict | None:
     category = ticket.get("category", "unknown")
     print(f"Processing {ticket_id} [{category}] ...")
     try:
-        kb_article = kb_search.find_kb_article(category)
+        sla_info = sla_tracker.calculate_sla(ticket)
+
+        should_escalate, reason = escalation_rules.check_auto_escalation(ticket, sla_info)
+        if should_escalate:
+            print(f"  Auto-escalating: {reason}")
+            result = escalation_rules.build_escalation_state(ticket, reason, sla_info)
+            state_manager.update_ticket_state(ticket_id, result)
+            return result
+
+        use_rag = os.environ.get("USE_RAG", "") == "1"
+        if use_rag:
+            from kb_search_rag import find_kb_article_rag
+            kb_article = find_kb_article_rag(ticket.get("message", ""))
+        else:
+            kb_article = kb_search.find_kb_article(category)
+
         result = agent.call_agent(ticket, kb_article)
         result["user"] = ticket.get("user", "")
         result["priority"] = ticket.get("priority", "")
+        result["sla_breached"] = sla_info["breached"]
+        result["sla_elapsed_minutes"] = sla_info["elapsed_minutes"]
         state_manager.update_ticket_state(ticket_id, result)
         return result
     except Exception as exc:
