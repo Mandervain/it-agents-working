@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(python src/main.py)",
+      "Bash(pip install*)",
+      "Bash(pip list)",
+      "Bash(find data/*)",
+      "Bash(find knowledge_base/*)",
+      "Bash(cat state/ticket_state.json)",
+      "Bash(cat output/*)"
+    ],
+    "deny": [
+      "Bash(rm -rf*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [],
+    "PostToolUse": []
+  }
+}

@@ -1,0 +1,12 @@
+[
+  {
+    "id": "INC-1001",
+    "source": "slack",
+    "user": "alice.smith",
+    "priority": "high",
+    "category": "vpn",
+    "status": "open",
+    "message": "Hi, I changed my corporate password yesterday and now I cannot connect to VPN. It keeps saying authentication failed. I need access urgently for a client call.",
+    "created_at": "2026-04-24T07:15:00Z"
+  }
+]
